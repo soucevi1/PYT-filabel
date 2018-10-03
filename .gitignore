@@ -1,3 +1,5 @@
 credentials.cfg
 labels.cfg
 __venv__
+setup.sh
+delete.sh

@@ -1,4 +1,5 @@
 import click
+import colorama
 import configparser
 import requests
 import sys
@@ -7,6 +8,19 @@ import pprint
 import fnmatch
 
 token = 'abc'
+
+
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
 
 
 def get_auth(f):
@@ -63,6 +77,8 @@ def get_repo_prs(r, state, base, session):
     print(f'Getting PRs of {r}')
     payload = {'state': state, 'base': base}
     pulls = session.get(f'https://api.github.com/repos/{r}/pulls', params=payload)
+    if pulls.status_code != 200:
+        return False
     return pulls.json()
 
 def get_pr_files(r, session, pull_num):
@@ -74,6 +90,8 @@ def get_pr_files(r, session, pull_num):
     """
     print(f'Getting file json of {r}: PR {pull_num}')
     pull_files = session.get(f'https://api.github.com/repos/{r}/pulls/{pull_num}/files')
+    if pull_files.status_code != 200:
+        return False
     return pull_files.json()
 
 
@@ -90,13 +108,19 @@ def get_pr_filenames(fj):
     return fns
 
 
-def get_labels(filenames, patterns):
+def get_labels_to_add(filenames, pattern_dict):
     """
     Get labels to add to the PR
         filenames: list of fns
         paterns: dict "label:[pattern, p...]"
     """
-
+    ret = []
+    for fn in filenames:
+        for entry in pattern_dict:
+            for i in range(len(pattern_dict[entry])):
+                if fnmatch.fnmatch(fn, pattern_dict[entry][i]):
+                    ret.append(entry)
+    return ret
 
 
 def get_label_patterns(file):
@@ -119,6 +143,63 @@ def get_label_patterns(file):
     return ret
     
 
+def get_labels_to_keep(labels_curr, pattern_dict):
+    """
+    Filter out the labels that match the configuration file
+    """
+    ret = []
+    pat = []
+    for entry in pattern_dict:
+        pat.append(entry)
+    for l in labels_curr:
+        if l in pat:
+            continue
+        else:
+            ret.append(l)
+    return ret
+
+
+def add_labels(repo, pull_num, labels, pull_info, session):
+    payload = {'labels': labels, 
+               'title': pull_info['title'], 
+               'body': pull_info['body'],
+               'state': pull_info['state'],
+               'milestone': pull_info['milestone']
+               'assignees': pull_info['assignees']}
+    ret = session.put(f'https://api.github.com/repos/{repo}/issues/{pull_num}', 
+        params=payload)
+    if ret.status_code != 200:
+        return False
+    return True
+
+
+def get_added_labels(l_new, l_old):
+    ret = []
+    for l in l_new:
+        if l in l_old:
+            continue
+        else:
+            ret.append(l)
+    return ret
+
+
+def get_removed_labels(l_new, l_old):
+    ret = []
+    for l in l_old:
+        if l in l_new:
+            continue
+        else:
+            ret.append(l)
+    return ret
+
+
+def get_labels_kept(l_new, l_old):
+    ret = []
+    for l in l_new:
+        if l in l_old:
+            ret.append(l)
+    return ret
+
 
 @click.command()
 @click.argument('REPOSLUGS', nargs=-1)
@@ -135,6 +216,7 @@ def get_label_patterns(file):
 
 def main(config_auth, config_labels, reposlugs, state, delete_old, base):
     """CLI tool for filename-pattern-based labeling of GitHub PRs"""
+    colorama.init(autoreset=True)
     # Validate inputs and parameters
     if config_auth == None:
         print('Auth configuration not supplied!')
@@ -152,8 +234,6 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
         print('Labels configuration not usable!')
         sys.exit(1)
 
-    sys.exit(1)
-
     # Open a session
     session = create_session(config_auth)
 
@@ -161,15 +241,58 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
     for r in reposlugs:
         # Get all PRs of the current repo
         pulls_json = get_repo_prs(r, state, base, session)
+        if pulls_json == False:
+            print(color.BOLD + 'REPO' + color.END + r + ' - ' + color.RED + color.BOLD + 'FAIL')
+            continue
+        print(color.BOLD + 'REPO' + color.END + r + ' - ' + color.GREEN + color.BOLD + 'OK')
         # For each PR find its number, current labels and get info about the files
         for n in range(len(pulls_json)):
             pull_num = pulls_json[n]['number']
             labels_current = pulls_json[n]['labels']
+            pull_info = {'milestone': pulls_json[n]['milestone'],
+                         'state': pulls_json[n]['state'],
+                         'title': pulls_json[n]['title'],
+                         'body': pulls_json[n]['body'],
+                         'assignees': pulls_json[n]['assignees']}
             pull_files_json = get_pr_files(r, session, pull_num)
+            if pull_files_json == False:
+                print(color.BOLD + '  PR' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.RED + 'FAIL')
+                continue
             pull_filenames = get_pr_filenames(pull_files_json)   
-            labels_to_add = get_labels(pull_filenames, fpatterns)                
+            labels_new = get_labels_to_add(pull_filenames, fpatterns)              
 
-            # TODO: dopsat getlabels
+            labels_to_add = []
+            fl = False
+            if delete_old == True:
+                labels_to_keep = get_labels_to_keep(labels_current)
+                labels_to_add.append(labels_to_keep)
+                labels_to_add.append(labels_new)
+                fl = add_labels(r, pull_num, labels_to_add, pull_info, session)
+
+            else:
+                labels_to_add.append(labels_current)
+                labels_to_add.append(labels_new)
+                labels_new.append(labels_current)
+                fl = add_labels(r, pull_num, labels_to_add, pull_info, session)
+
+            if fl == True:
+                print(color.BOLD + '  PR' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.GREEN + 'OK')
+                labels_added = get_added_labels(labels_new, labels_current)
+                labels_removed = get_removed_labels(labels_new, labels_current)
+                labels_kept = get_labels_kept(labels_new, labels_current)
+                for l in labels_added:
+                    print('    ' + color.GREEN + f'+ {l}' + color.END)
+                for l in labels_removed:
+                    print('    ' + color.RED + f'+ {l}' + color.END)
+                for l in labels_kept:
+                    print(f'    + {l}')
+            else:
+                print(color.BOLD + '  PR' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.RED + 'FAIL')
+
+
+
+
+            # TODO: nejspis uz jen otestovat + ostranit prebytecne vypisy
 
 
     # pro kazdy repozitar:

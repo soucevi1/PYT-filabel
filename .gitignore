@@ -1,5 +1,8 @@
 credentials.cfg
-labels.cfg
+labels*
+out*
 __venv__
 setup.sh
 delete.sh
+test*
+test_environment

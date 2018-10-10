@@ -36,7 +36,7 @@ def get_auth(f):
             ret = config.get('github', o)
     if ret == '':
         return False
-    return ret #config['github']['token']
+    return ret
 
 
 def token_auth(req):
@@ -47,25 +47,19 @@ def token_auth(req):
 
 def validate_repo_names(repos):
     """Tell whether repo names are valid"""
-    #print('Validating repo names:')
     for r in repos:
         s = r.split('/')
         if (s[0] == r):
-            #print(f'  Not valid: {r}.')
             return r
         if (s[0] == '') or (s[1] == ''):
-            #print(f'  Not valid: {r}.')
             return r
         if (s[0].find('/') != -1) or (s[1].find('/') != -1):
-            #print(f'  Not valid: {r}.')
             return r
-        #print(f'  {r}: OK')
     return True
 
 
 def create_session(config_auth):
     """Create session using the access token"""
-    #print('Creating GitHub session.')
     global token
     token = get_auth(config_auth)
     if token == False:
@@ -84,7 +78,6 @@ def get_repo_prs(r, state, base, session):
         base: base branch
         session: open and authenticated session
     """
-    #print(f'Getting PRs of {r}')
     payload = {'state': state, 'base': base}
     pulls = session.get(f'https://api.github.com/repos/{r}/pulls', params=payload)
     if pulls.status_code != 200:
@@ -105,7 +98,7 @@ def get_repo_prs(r, state, base, session):
             if n_flag == False:
                 break 
             pjlist += pulls.json()
-    return pjlist #pulls.json()
+    return pjlist
 
 
 def get_pr_files(r, session, pull_num):
@@ -115,11 +108,9 @@ def get_pr_files(r, session, pull_num):
         session: open and authenticated session
         pull_num: number of the pull request
     """
-    #print(f'Getting file json of {r}: PR {pull_num}')
     pull_files = session.get(f'https://api.github.com/repos/{r}/pulls/{pull_num}/files')
     if pull_files.status_code != 200:
         return False
-    #pprint.pprint(pull_files.text)
     flist = get_pr_filenames(pull_files.json())
 
     lasturl = 'abc'
@@ -147,13 +138,9 @@ def get_pr_filenames(fj):
     Parse filenames from file json
         fj: files json
     """
-    #print('Parsing filenames from the json file')
     fns = []
-    #pprint.pprint(fj)
     for i in range(len(fj)):
         fns.append(fj[i]['filename'])
-        #print(f"  filename: {fj[i]['filename']}")        
-    #print(fns)
     return fns
 
 
@@ -188,7 +175,6 @@ def get_label_patterns(file):
         if '' in patts:
             patts.remove('')
         ret[o] = patts
-    #print(ret)
     return ret
     
 
@@ -210,12 +196,13 @@ def get_unknown_labels_to_keep(labels_curr, pattern_dict):
 
 
 def add_labels(repo, pull_num, labels, session):
+    """
+    Add all the labels to the PR
+    """
     params = json.dumps(labels)
     ret = session.put(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels', 
         data=params)
     if ret.status_code != 200:
-        #print(ret.status_code)
-        #print(ret.json())
         return False
     if test_labels_added(repo, pull_num, labels, session) == False:
         return False
@@ -223,6 +210,9 @@ def add_labels(repo, pull_num, labels, session):
 
 
 def test_labels_added(repo, pull_num, labels, session):
+    """
+    Test whether the labels were added correctly (permissions etc.)
+    """
     ret = session.get(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels')
     if ret.status_code != 200:
         return False
@@ -249,54 +239,32 @@ def test_labels_added(repo, pull_num, labels, session):
 
 
 def get_label_names(l_json):
+    """
+    Get names of all the labels in given json
+    """
     llist = []
     for j in l_json:
         llist.append(j['name'])
     return llist
 
 
-def remove_labels(repo, pull_num, labels, session):
-    params = json.dumps(labels)
-    ret = 0
-    for l in labels:
-        ret = session.delete(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels/{l}')
-        if ret.status_code != 200:
-            #print(ret.status_code)
-            #print(ret.json())
-            return False
-    return True
-
-
 def get_added_labels(l_new, l_old):
+    """
+    Get labels that are new to this PR
+    """
     ret = []
     for l in l_new:
         if l in l_old:
             continue
         else:
             ret.append(l)
-    return ret
-
-
-def get_removed_labels(l_new, l_old):
-    ret = []
-    for l in l_old:
-        if l in l_new:
-            continue
-        else:
-            ret.append(l)
-    return ret
-
-
-def get_labels_kept(l_new, l_old, pattern_dict):
-    ret = []
-    for l in l_new:
-        if l in l_old:
-            ret.append(l)
-
     return ret
 
 
 def get_current_labels(lj):
+    """
+    Get labels from json file
+    """
     ret = []
     for i in lj:
         ret.append(i['name'])
@@ -304,6 +272,10 @@ def get_current_labels(lj):
 
 
 def get_new_in_current(l_new, l_old, pattern_dict):
+    """
+    Get those labels, that are supposed to be added but 
+    were already there and known
+    """
     ret = []
     ret2 = []
     for l in l_new:
@@ -316,6 +288,9 @@ def get_new_in_current(l_new, l_old, pattern_dict):
 
 
 def get_current_in_all(l_to_add, l_old, pattern_dict):
+    """
+    Get those labels that were already there and known
+    """
     ret = []
     ret2 = []
     for l in l_to_add:
@@ -328,9 +303,11 @@ def get_current_in_all(l_to_add, l_old, pattern_dict):
 
 
 def get_removed(l_new, l_old, fpatterns):
+    """
+    Get those labels that are supposed to be removed
+    """
     ret = []
     ret2 = []
-    #zname co nejsou na aktualnim seznamu
     for l in l_old:
         if l in fpatterns:
             ret.append(l)
@@ -400,30 +377,23 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
             labels_new = get_all_labels(pull_filenames, fpatterns)              
 
             labels_to_add = []
-            labels_to_remove = []
-            labels_removed = []
             labels_plus = []
             labels_minus = []
             labels_eq = []
             fl = False
             if delete_old == True:
-                # smazat stare - naleznu nezname a k nim pridam nove
+                # Delete old
                 u_labels_to_keep = get_unknown_labels_to_keep(labels_current, fpatterns)
-                #print(f'to keep {labels_to_keep}')
                 labels_to_add = labels_new#labels_to_keep + labels_new
-                #print(f'to add {labels_to_add}')
-                #labels_to_remove = get_removed_labels(labels_new, labels_current)
-                #print(f'to remove {labels_to_remove}')
                 labels_to_add += u_labels_to_keep
                 labels_to_add = list(set(labels_to_add))
                 fl = add_labels(r, pull_num, labels_to_add, session)
                 labels_plus = get_added_labels(labels_new, labels_current)
                 labels_eq = get_new_in_current(labels_new, labels_current, fpatterns)
                 labels_minus = get_removed(labels_new, labels_current, fpatterns)                
-                #fl = remove_labels(r, pull_num, labels_to_remove, session)
 
             else:
-                # nemazat stare - pouze vezmu stavajici a pridam k nim nove
+                # No delete old
                 labels_to_add = labels_new + labels_current
                 labels_to_add = list(set(labels_to_add))
                 fl = add_labels(r, pull_num, labels_to_add, session)
@@ -449,42 +419,6 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
                         print(f'    = {l[1]}')
             else:
                 print(color.BOLD + '  PR ' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.RED + 'FAIL')
-
-
-
-
-            # TODO: 
-            #       - foreign repo - po pridani stitku testovat, jestli se fakt pridaly
-            #       - GET na PRs je taky strankovany
-            #       - empty_globs_remove_disabled
-            #           vypisuju rovnitka tam, kde nemam (pravd. se nemaji vypisovat
-            #               zname stavajici, ktere nejsou aktualne znovuobjeveny)
-            #           no-delete-old, labels eraser
-            #       - diffs - +,- a = se vypisuji v jinem poradi (ja +,-,=,=; oni =,-,=,+)
-            #           ROVNAT ABECEDNE
-            #       - neresi prazdny auth conf
-
-
-
-
-# delete old:
-#   pridat stitky:
-#       stavajici nezname
-#       nove zjistene (z nich ale muzou nektere byt stavajici)
-#   zjistit:
-#       uplne nove (+)
-#       nove zjistene, ale stavajici (=)
-#       zname, ktere nejsou na aktualnim seznamu (-)
-#
-# no-delete-old:
-#   pridat stitky;
-#       vsechny stavajici
-#       nove zjistene
-#   zjistit:
-#       uplne nove (+)
-#       zname, ktere uz tam ale byly (=)
-#       zde minus neni
-
 
 
 if __name__ == '__main__':

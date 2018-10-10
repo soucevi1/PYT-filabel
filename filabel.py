@@ -27,7 +27,15 @@ def get_auth(f):
     """Get authentication token from config file"""
     config = configparser.ConfigParser()
     config.read_file(f)
-    ret = config.get('github', 'token', fallback='Auth configuration not usable!')
+    if config.has_section('github') == False:
+        return False
+    opts = config.options('github')
+    ret = ''
+    for o in opts:
+        if o == 'token':
+            ret = config.get('github', o)
+    if ret == '':
+        return False
     return ret #config['github']['token']
 
 
@@ -60,6 +68,8 @@ def create_session(config_auth):
     #print('Creating GitHub session.')
     global token
     token = get_auth(config_auth)
+    if token == False:
+        return False
     session = requests.Session()
     session.headers = {'User-Agent': 'soucevi1'}
     session.auth = token_auth
@@ -79,7 +89,24 @@ def get_repo_prs(r, state, base, session):
     pulls = session.get(f'https://api.github.com/repos/{r}/pulls', params=payload)
     if pulls.status_code != 200:
         return False
-    return pulls.json()
+
+    pjlist = pulls.json()
+    if 'Link' in pulls.headers:
+        while True:
+            links = requests.utils.parse_header_links(pulls.headers['Link'])
+            n_flag = False
+            for l in links:
+                if l['rel'] == 'next':
+                    pulls = session.get(l['url'])
+                    if pulls.status_code != 200:
+                        return False
+                    n_flag = True
+                    break            
+            if n_flag == False:
+                break 
+            pjlist += pulls.json()
+    return pjlist #pulls.json()
+
 
 def get_pr_files(r, session, pull_num):
     """
@@ -190,7 +217,42 @@ def add_labels(repo, pull_num, labels, session):
         #print(ret.status_code)
         #print(ret.json())
         return False
+    if test_labels_added(repo, pull_num, labels, session) == False:
+        return False
     return True
+
+
+def test_labels_added(repo, pull_num, labels, session):
+    ret = session.get(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels')
+    if ret.status_code != 200:
+        return False
+
+    llist = get_label_names(ret.json())
+
+    if 'Link' in ret.headers:
+        while True:
+            links = requests.utils.parse_header_links(ret.headers['Link'])
+            n_flag = False
+            for l in links:
+                if l['rel'] == 'next':
+                    ret = session.get(l['url'])
+                    if ret.status_code != 200:
+                        return False
+                    n_flag = True
+                    break
+            llist += get_label_names(ret.json())
+            if n_flag == False:
+                break    
+    if set(llist) != set(labels):
+        return False
+    return True
+
+
+def get_label_names(l_json):
+    llist = []
+    for j in l_json:
+        llist.append(j['name'])
+    return llist
 
 
 def remove_labels(repo, pull_num, labels, session):
@@ -294,7 +356,7 @@ def get_removed(l_new, l_old, fpatterns):
 
 def main(config_auth, config_labels, reposlugs, state, delete_old, base):
     """CLI tool for filename-pattern-based labeling of GitHub PRs"""
-    #colorama.init(autoreset=True)
+    colorama.init(autoreset=True)
     # Validate inputs and parameters
     if config_auth == None:
         print('Auth configuration not supplied!', file=sys.stderr)
@@ -304,7 +366,7 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
         sys.exit(1)
     rep = validate_repo_names(reposlugs)
     if rep != True:
-        print(f'Reposlug {rep} not valid', file=sys.stderr)
+        print(f'Reposlug {rep} not valid!', file=sys.stderr)
         sys.exit(1)
 
     fpatterns = get_label_patterns(config_labels)
@@ -314,6 +376,9 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
 
     # Open a session
     session = create_session(config_auth)
+    if session == False:
+        print('Auth configuration not usable!', file=sys.stderr)
+        sys.exit(1)        
 
     # Iterate through all the repositories
     for r in reposlugs:
@@ -354,9 +419,7 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
                 fl = add_labels(r, pull_num, labels_to_add, session)
                 labels_plus = get_added_labels(labels_new, labels_current)
                 labels_eq = get_new_in_current(labels_new, labels_current, fpatterns)
-                labels_minus = get_removed(labels_new, labels_current, fpatterns)
-                if fl == False:
-                    break
+                labels_minus = get_removed(labels_new, labels_current, fpatterns)                
                 #fl = remove_labels(r, pull_num, labels_to_remove, session)
 
             else:
@@ -365,16 +428,25 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
                 labels_to_add = list(set(labels_to_add))
                 fl = add_labels(r, pull_num, labels_to_add, session)
                 labels_plus = get_added_labels(labels_new, labels_current)
-                labels_eq = get_current_in_all(labels_to_add, labels_current, fpatterns)
+                labels_eq = get_current_in_all(labels_new, labels_current, fpatterns)
 
             if fl == True:
+                labels_to_print = []
+                for x in labels_plus:
+                    labels_to_print.append(('+', x))
+                for x in labels_minus:
+                    labels_to_print.append(('-', x))
+                for x in labels_eq:
+                    labels_to_print.append(('=', x))
+                labels_to_print.sort(key=lambda tup: tup[1])
                 print(color.BOLD + '  PR ' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.GREEN + 'OK')
-                for l in labels_plus:
-                    print('    ' + color.GREEN + f'+ {l}' + color.END)
-                for l in labels_minus:
-                    print('    ' + color.RED + f'- {l}' + color.END)
-                for l in labels_eq:
-                    print(f'    = {l}')
+                for l in labels_to_print:
+                    if l[0] == '+':
+                        print('    ' + color.GREEN + f'+ {l[1]}' + color.END)
+                    elif l[0] == '-':
+                        print('    ' + color.RED + f'- {l[1]}' + color.END)
+                    elif l[0] == '=':
+                        print(f'    = {l[1]}')
             else:
                 print(color.BOLD + '  PR ' + color.END + f'https://github.com/{r}/pull/{pull_num} - ' + color.BOLD + color.RED + 'FAIL')
 
@@ -383,24 +455,15 @@ def main(config_auth, config_labels, reposlugs, state, delete_old, base):
 
             # TODO: 
             #       - foreign repo - po pridani stitku testovat, jestli se fakt pridaly
-            #       - nine_labels - vypisuju neznamy existujici stitek zacinajici na 'a'           
-            #           se zaplym delete old            
             #       - GET na PRs je taky strankovany
-            #       - closed_prs_no_labels - ??????
-            #       - closed_ps_get_labels - nejspis stejne jako vyse
-            #           prs se nejspis neberou v potaz (state closed)
-            #       - state all nefunguje, pravdepodobne zase zavrene
-            #       - master i custom base taky nejspi spatne predavane
-            #       - diffs - prebyva = u vypisu
-            #       - nevypisuje, kdyz neni zadany konfigurak
+            #       - empty_globs_remove_disabled
+            #           vypisuju rovnitka tam, kde nemam (pravd. se nemaji vypisovat
+            #               zname stavajici, ktere nejsou aktualne znovuobjeveny)
+            #           no-delete-old, labels eraser
+            #       - diffs - +,- a = se vypisuji v jinem poradi (ja +,-,=,=; oni =,-,=,+)
+            #           ROVNAT ABECEDNE
             #       - neresi prazdny auth conf
-            #       - ZEPTAT se na timeout u setupu
 
-
-
-            # SOLVED?:
-            #       - labels_empty - u prazdneho konfiguraku stejne vypisuju stavajici (=) stitky
-            #           S = VYPISOVAT JENOM ZNAME
 
 
 

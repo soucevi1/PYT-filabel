@@ -6,3 +6,4 @@ setup.sh
 delete.sh
 test*
 test_environment
+res.txt

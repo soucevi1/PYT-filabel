@@ -123,7 +123,7 @@ def check_signature(headers):
     hobj = hmac.new(bytearray(secret, 'utf8'), request.data, hashlib.sha1)
     hm = 'sha1=' + str(hobj.hexdigest())
     if hm != sig:
-        with open('podpisy.txt') as f:
+        with open('podpisy.txt', 'w+') as f:
             f.write(f'jejich: {sig}\nmuj: {hm}')
         return False
     return True

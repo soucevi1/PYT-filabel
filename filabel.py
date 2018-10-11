@@ -115,7 +115,7 @@ def handle_pull_request(js):
         f.write(str(js))
 
     
-def check_signature(headers)
+def check_signature(headers):
     secret = get_secret()
     if 'X-Hub-Signature' not in headers:
         return False

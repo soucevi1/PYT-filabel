@@ -93,7 +93,7 @@ def react_to_post():
     payload_json = request.get_json()
     if payload_headers['X-GitHub-Event'] == 'ping':
         handle_ping(payload_json)
-        return '204 No Content' 
+        return 204 
     elif payload_json['X-GitHub-Event'] == 'pull_request':
         handle_pull_request(payload_json)
     else:

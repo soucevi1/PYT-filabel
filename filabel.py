@@ -89,18 +89,21 @@ def react_to_post():
     payload_json = request.get_json()
     if payload_json['X-GitHub-Event'] == 'ping':
         handle_ping(payload_json)
+        return '204 No Content' 
     elif payload_json['X-GitHub-Event'] == 'pull_request':
         handle_pull_request(payload_json)
+    else:
+        with open('err_log.txt', 'w+') as f:
+            f.write(str(payload_json))
 
 
 def handle_ping(js):
-    f = open('PING_json.txt', 'w+')
-    f.write(str(js))
-    return '204 No Content'
+    with open('PING_json.txt', 'w+') as f:
+        f.write(str(js))
 
 def handle_pull_request(js):
-    f = open('PR_json.txt', 'w+')
-    f.write(str(js))
+    with open('PR_json.txt', 'w+') as f:
+        f.write(str(js))
     
 
 

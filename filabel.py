@@ -87,8 +87,11 @@ def show_main_page():
 
 @app.route('/', methods=['POST'])
 def react_to_post():
+    payload_headers = request.headers
+    if 'X-GitHub-Event' not in payload_headers:
+        return
     payload_json = request.get_json()
-    if payload_json['X-GitHub-Event'] == 'ping':
+    if payload_headers['X-GitHub-Event'] == 'ping':
         handle_ping(payload_json)
         return '204 No Content' 
     elif payload_json['X-GitHub-Event'] == 'pull_request':

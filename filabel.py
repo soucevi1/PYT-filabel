@@ -120,8 +120,9 @@ def check_signature(headers):
     if 'X-Hub-Signature' not in headers:
         return False
     sig = headers['X-Hub-Signature']
-    hm = 'sha1=' + str(hmac.new(bytearray(secret, 'utf8'), request.data, hashlib.sha1))
-    if hobj.hexdigest() != sig:
+    hobj = hmac.new(bytearray(secret, 'utf8'), request.data, hashlib.sha1)
+    hm = 'sha1=' + str(hobj.hexdigest())
+    if hm != sig:
         with open('podpisy.txt') as f:
             f.write(f'jejich: {sig}\nmuj: {hm}')
         return False

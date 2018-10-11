@@ -123,7 +123,7 @@ def check_signature(headers):
     sig_parts = sig.split('=')
     if len(sig_parts) != 2:
         return False
-    hobj = hmac.new(bytearray(secret, 'utf8'), bytearray(request.body,'utf8'), hashlib.sha1)
+    hobj = hmac.new(bytearray(secret, 'utf8'), bytearray(request.data,'utf8'), hashlib.sha1)
     if hobj.hexdigest() != sig_parts[1]:
         return False
     return True

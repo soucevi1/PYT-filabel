@@ -10,6 +10,8 @@ from flask import render_template
 from flask import request
 import fnmatch
 import os
+import hmac
+import hashlib
 
 app = Flask(__name__)
 
@@ -92,7 +94,8 @@ def react_to_post():
         return
     payload_json = request.get_json()
     if payload_headers['X-GitHub-Event'] == 'ping':
-        handle_ping(payload_json)
+        if handle_ping(payload_headers) == False:
+            return 404
         return 204 
     elif payload_json['X-GitHub-Event'] == 'pull_request':
         handle_pull_request(payload_json)
@@ -101,16 +104,45 @@ def react_to_post():
             f.write(str(payload_json))
 
 
-def handle_ping(js):
-    with open('PING_json.txt', 'w+') as f:
-        f.write(str(js))
+def handle_ping(headers):
+    if check_signature(headers) == False:
+        return False
+    return True
+
 
 def handle_pull_request(js):
     with open('PR_json.txt', 'w+') as f:
         f.write(str(js))
+
     
+def check_signature(headers)
+    secret = get_secret()
+    if 'X-Hub-Signature' not in headers:
+        return False
+    sig = headers['X-Hub-Signature']
+    sig_parts = sig.split('=')
+    if len(sig_parts) != 2:
+        return False
+    hobj = hmac.new(bytearray(secret, 'utf8'), bytearray(request.body,'utf8'), hashlib.sha1)
+    if hobj.hexdigest() != sig_parts[1]:
+        return False
+    return True
 
 
+
+def get_secret():
+    conf_files = get_conf_files()
+    config = configparser.ConfigParser()
+    ret = ''
+    with open(conf_files['cred']) as f:
+        config.read_file(f)
+        if config.has_section('github') == False:
+            return False
+        opts = config.options('github')
+        for o in opts:
+            if o == 'secret':
+                ret = config.get('github', o)
+    return ret
 
 
 token = 'abc'

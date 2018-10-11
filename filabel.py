@@ -5,7 +5,92 @@ import requests
 import sys
 import json
 import pprint
+from flask import Flask
+from flask import render_template
 import fnmatch
+import os
+
+app = Flask(__name__)
+
+# Default values for configuration files
+cred_conf_default = 'credentials.cfg'
+label_conf_default = 'labels.cfg'
+
+
+# POST na /:
+#   - prijem pull_request a ping
+#   - na oboji spravne odpovedet
+#   - na PR nastavit stitky
+#   - zabezpeceni - X-Hub-Signature
+
+# GET na /:
+#   - HTML stranka (nutna sablona)
+#   - vysvetleni matchovacich pravidel
+#   - uzivatel nastavujici stitky
+
+# FILABEL_CONFIG
+#   - promenna vedouci ke konfigurakum
+#   - pokud je vice konfiguraku, oddeleny dvojteckou
+#   - zavedeno mnou: budou defaultni konfiguraky pokud nebude promenna
+
+def get_conf_files():
+    """
+    Get names of both of the configuration files
+    """
+    ret_files = {'cred': '', 'label': ''}
+    cvar = os.getenv('FILABEL_CONFIG')
+    if cvar == None:
+        ret_files['cred'] = cred_conf_default
+        ret_files['label'] = label_conf_default
+        return ret_files
+    # Test if there are more conf files
+    cvar = cvar.split(':')
+    if len(cvar) >= 2:
+        for fn in cvar:
+            if 'label' in fn:
+                ret_files['label'] = fn
+            elif 'cred' in fn:
+                ret_files['cred'] = fn
+        if ret_files['label'] == '':
+            ret_files['label'] = label_conf_default
+        if ret_files['cred'] == '':
+            ret_files['cred'] == cred_conf_default
+        return ret_files
+    # only 1 CF supplied
+    if 'label' in cvar:
+        ret_files['label'] = cvar
+        ret_files['cred'] = cred_conf_default
+    elif 'cred' in cvar:
+        ret_files['cred'] = cvar
+        ret_files['label'] = label_conf_default
+    else:
+        ret_files['label'] = label_conf_default
+        ret_files['cred'] = cred_conf_default
+    return ret_files
+
+
+@app.route('/', methods=['GET'])
+def show_main_page():
+    """
+    Show main page '/' to GET method. 
+    """
+    filenames = get_conf_files()
+    r = ''
+    with open(filenames['label']) as f:
+        r = get_label_patterns(f)
+        if r == False:
+            r = {'X': 'No label configuration supplied!'}    
+    username = 'soucevi1'
+    return render_template('main.html', name=username, rules = r)
+
+
+@app.route('/', methods=['POST'])
+def react_to_pr():
+    filenames = get_conf_files()
+    
+
+
+
 
 token = 'abc'
 

@@ -86,7 +86,7 @@ def show_main_page():
 
 @app.route('/', methods=['POST'])
 def react_to_post():
-    payload_json = request.get_json()
+    payload_json = flask.request.get_json()
     if payload_json['X-GitHub-Event'] == 'ping':
         handle_ping(payload_json)
         return '204 No Content' 

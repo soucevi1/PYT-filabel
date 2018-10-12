@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Filabel</title>
+    </head>
+    <body>
+        <marquee>This website was created as the 2nd homework of MI-PYT. Webmaster: Vít Souček</marquee>
+        {% if name %}
+            <span>User: {{ name }}</span>
+        {% else %}
+            <span>User: no name specified</span>
+        {% endif %}
+
+        <ul>
+            {% for key in rules %}
+            {{ key }}:
+            <ul>
+                {% for item in rules[key] %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endfor %}
+        </ul>
+    </body>
+</html>

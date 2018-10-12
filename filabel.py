@@ -21,22 +21,6 @@ label_conf_default = 'labels.cfg'
 repo_name = 'soucevi1/PYT-01'
 
 
-# POST na /:
-#   - prijem pull_request a ping
-#   - na oboji spravne odpovedet
-#   - na PR nastavit stitky
-#   - zabezpeceni - X-Hub-Signature
-
-# GET na /:
-#   - HTML stranka (nutna sablona)
-#   - vysvetleni matchovacich pravidel
-#   - uzivatel nastavujici stitky
-
-# FILABEL_CONFIG
-#   - promenna vedouci ke konfigurakum
-#   - pokud je vice konfiguraku, oddeleny dvojteckou
-#   - zavedeno mnou: budou defaultni konfiguraky pokud nebude promenna
-
 def get_conf_files():
     """
     Get names of both of the configuration files
@@ -60,7 +44,7 @@ def get_conf_files():
         if ret_files['cred'] == '':
             ret_files['cred'] == cred_conf_default
         return ret_files
-    # only 1 CF supplied
+    # Only 1 CF supplied
     if 'label' in cvar:
         ret_files['label'] = cvar
         ret_files['cred'] = cred_conf_default
@@ -90,6 +74,10 @@ def show_main_page():
 
 @app.route('/', methods=['POST'])
 def react_to_post():
+    """
+    React to POST method - find if it came from GitHub 
+    and if it was sent by the corrent event
+    """
     payload_headers = request.headers
     if 'X-GitHub-Event' not in payload_headers:
         return
@@ -108,12 +96,18 @@ def react_to_post():
 
 
 def handle_ping(headers):
+    """
+    Answer to the ping request
+    """
     if check_signature(headers) == False:
         return False
     return True
 
 
 def handle_pull_request(headers, pj):
+    """
+    Answer to the PR request and change the labels
+    """
     if check_signature(headers) == False:
         return False
     filenames = get_conf_files()
@@ -149,8 +143,10 @@ def handle_pull_request(headers, pj):
 
     
 def check_signature(headers):
+    """
+    Verify the X-Hub-Signature
+    """
     secret = get_secret()
-    #secret = "********"
     if 'X-Hub-Signature' not in headers:
         print('no signature')
         return False
@@ -168,8 +164,10 @@ def check_signature(headers):
         return False     
     return True
 
-# porovnani klicu nefunguje
 def get_secret():
+    """
+    Read the webhook secret from configuration file
+    """
     conf_files = get_conf_files()
     config = configparser.ConfigParser()
     ret = ''

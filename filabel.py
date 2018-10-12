@@ -53,7 +53,7 @@ def get_conf_files():
         for fn in cvar:
             if 'label' in fn:
                 ret_files['label'] = fn
-            elif 'cred' in fn:
+            elif ('cred' in fn) or ('auth' in fn):                
                 ret_files['cred'] = fn
         if ret_files['label'] == '':
             ret_files['label'] = label_conf_default
@@ -64,7 +64,7 @@ def get_conf_files():
     if 'label' in cvar:
         ret_files['label'] = cvar
         ret_files['cred'] = cred_conf_default
-    elif 'cred' in cvar:
+    elif ('cred' in cvar) or ('auth' in cvar):
         ret_files['cred'] = cvar
         ret_files['label'] = label_conf_default
     else:
@@ -160,7 +160,7 @@ def check_signature(headers):
         print('wrong hashfunction')
         return False
     s = bytearray(secret, 'utf8')
-    m = bytearray(json.dumps(request.data), 'utf8')
+    m = request.data
     h = hmac.new(s, msg=m, digestmod=hashlib.sha1)
     my_signature = h.hexdigest()
     if hmac.compare_digest(my_signature, signature) == False:
@@ -181,6 +181,7 @@ def get_secret():
         for o in opts:
             if o == 'secret':
                 ret = config.get('github', o)
+    print(f"secret: {ret}", file=sys.stderr)
     return ret
 
 

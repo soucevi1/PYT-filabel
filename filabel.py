@@ -114,8 +114,8 @@ def handle_ping(headers):
 
 
 def handle_pull_request(headers, pj):
-    #if check_signature(headers) == False:
-    #    return False
+    if check_signature(headers) == False:
+        return False
     filenames = get_conf_files()
     session = requests.Session()
     with open(filenames['cred']) as f:
@@ -164,7 +164,7 @@ def check_signature(headers):
     h = hmac.new(s, msg=m, digestmod=hashlib.sha1)
     my_signature = h.hexdigest()
     if hmac.compare_digest(my_signature, signature) == False:
-        print(f'secret: {s}\nmsg: {m}\nsig: {signature}\nmy: {my_signature}')
+        print(f'secret: {s}\nmsg: {m}\nsig: {signature}\nmy: {my_signature}', file=sys.stderr)
         return False     
     return True
 

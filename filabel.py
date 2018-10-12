@@ -160,7 +160,7 @@ def check_signature(headers):
         print('wrong hashfunction')
         return False
     s = bytearray(secret, 'utf8')
-    m = request.data
+    m = bytearray(json.dumps(request.data), 'utf8')
     h = hmac.new(s, msg=m, digestmod=hashlib.sha1)
     my_signature = h.hexdigest()
     if hmac.compare_digest(my_signature, signature) == False:

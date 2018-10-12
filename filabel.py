@@ -5,7 +5,182 @@ import requests
 import sys
 import json
 import pprint
+from flask import Flask
+from flask import render_template
+from flask import request
 import fnmatch
+import os
+import hmac
+import hashlib
+
+app = Flask(__name__)
+
+# Default values for configuration files
+cred_conf_default = 'credentials.cfg'
+label_conf_default = 'labels.cfg'
+repo_name = 'soucevi1/PYT-01'
+
+
+# POST na /:
+#   - prijem pull_request a ping
+#   - na oboji spravne odpovedet
+#   - na PR nastavit stitky
+#   - zabezpeceni - X-Hub-Signature
+
+# GET na /:
+#   - HTML stranka (nutna sablona)
+#   - vysvetleni matchovacich pravidel
+#   - uzivatel nastavujici stitky
+
+# FILABEL_CONFIG
+#   - promenna vedouci ke konfigurakum
+#   - pokud je vice konfiguraku, oddeleny dvojteckou
+#   - zavedeno mnou: budou defaultni konfiguraky pokud nebude promenna
+
+def get_conf_files():
+    """
+    Get names of both of the configuration files
+    """
+    ret_files = {'cred': '', 'label': ''}
+    cvar = os.getenv('FILABEL_CONFIG')
+    if cvar == None:
+        ret_files['cred'] = cred_conf_default
+        ret_files['label'] = label_conf_default
+        return ret_files
+    # Test if there are more conf files
+    cvar = cvar.split(':')
+    if len(cvar) >= 2:
+        for fn in cvar:
+            if 'label' in fn:
+                ret_files['label'] = fn
+            elif 'cred' in fn:
+                ret_files['cred'] = fn
+        if ret_files['label'] == '':
+            ret_files['label'] = label_conf_default
+        if ret_files['cred'] == '':
+            ret_files['cred'] == cred_conf_default
+        return ret_files
+    # only 1 CF supplied
+    if 'label' in cvar:
+        ret_files['label'] = cvar
+        ret_files['cred'] = cred_conf_default
+    elif 'cred' in cvar:
+        ret_files['cred'] = cvar
+        ret_files['label'] = label_conf_default
+    else:
+        ret_files['label'] = label_conf_default
+        ret_files['cred'] = cred_conf_default
+    return ret_files
+
+
+@app.route('/', methods=['GET'])
+def show_main_page():
+    """
+    Show main page '/' to GET method. 
+    """
+    filenames = get_conf_files()
+    r = ''
+    with open(filenames['label']) as f:
+        r = get_label_patterns(f)
+        if r == False:
+            r = {'X': 'No label configuration supplied!'}    
+    username = 'soucevi1'
+    return render_template('main.html', name=username, rules = r)
+
+
+@app.route('/', methods=['POST'])
+def react_to_post():
+    payload_headers = request.headers
+    if 'X-GitHub-Event' not in payload_headers:
+        return
+    payload_json = request.get_json()
+    if payload_headers['X-GitHub-Event'] == 'ping':
+        if handle_ping(payload_headers) == False:
+            app.logger.info('ping fail')
+            return '', 404
+        return '', 200
+    elif payload_headers['X-GitHub-Event'] == 'pull_request':
+        if handle_pull_request(payload_headers, payload_json['pull_request']) == False:
+            return '', 501
+        return '', 200
+    else:
+        return '', 500
+
+
+def handle_ping(headers):
+    if check_signature(headers) == False:
+        return False
+    return True
+
+
+def handle_pull_request(headers, pj):
+    #if check_signature(headers) == False:
+    #    return False
+    filenames = get_conf_files()
+    session = requests.Session()
+    with open(filenames['cred']) as f:
+        s = create_session(f)
+        if s == False:
+            print('Unable to open session', file=sys.stderr)
+            return False
+        session = s
+    pull_num = pj['number']
+    labels_current = get_current_labels(pj['labels'])
+    pull_filenames = get_pr_files(repo_name, session, pull_num)
+    if pull_filenames == False:
+        print('Unable to get the list of filenames', file=sys.stderr)
+        return False
+    fpatterns = get_label_patterns(config_labels)
+    if fpatterns == False:
+        print('Unable to get list of patterns', file=sys.stderr)
+        return False
+    labels_new = get_all_labels(pull_filenames, fpatterns) 
+    u_labels_to_keep = get_unknown_labels_to_keep(labels_current, fpatterns)
+    labels_to_add = labels_new
+    labels_to_add += u_labels_to_keep
+    labels_to_add = list(set(labels_to_add))
+    fl = add_labels(repo_name, pull_num, labels_to_add, session)     
+    if fl == False:
+        print('Unable to add labels', file=sys.stderr)
+        return False
+    return True
+
+    
+def check_signature(headers):
+    #secret = get_secret()
+    secret = "********"
+    if 'X-Hub-Signature' not in headers:
+        print('no signature')
+        return False
+    sig = headers['X-Hub-Signature']
+    sha_name, signature = sig.split('=')
+    if sha_name != 'sha1':
+        print('wrong hashfunction')
+        return False
+    s = bytearray(secret, 'utf8')
+    m = request.data
+    h = hmac.new(s, msg=m, digestmod=hashlib.sha1)
+    my_signature = h.hexdigest()
+    if hmac.compare_digest(my_signature, signature) == False:
+        print(f'secret: {s}\nmsg: {m}\nsig: {signature}\nmy: {my_signature}')
+        return False     
+    return True
+
+# porovnani klicu nefunguje
+def get_secret():
+    conf_files = get_conf_files()
+    config = configparser.ConfigParser()
+    ret = ''
+    with open(conf_files['cred']) as f:
+        config.read_file(f)
+        if config.has_section('github') == False:
+            return False
+        opts = config.options('github')
+        for o in opts:
+            if o == 'secret':
+                ret = config.get('github', o)
+    return ret
+
 
 token = 'abc'
 
@@ -103,7 +278,7 @@ def get_repo_prs(r, state, base, session):
 
 def get_pr_files(r, session, pull_num):
     """
-    Get json containing all the files that are modified in the current pull request
+    Get list containing all the files that are modified in the current pull request
         r: string 'author/repo-name'
         session: open and authenticated session
         pull_num: number of the pull request

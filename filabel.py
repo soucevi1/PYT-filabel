@@ -99,8 +99,8 @@ def react_to_post():
             app.logger.info('ping fail')
             return '', 404
         return '', 200
-    elif payload_json['X-GitHub-Event'] == 'pull_request':
-        if handle_pull_request(payload_headers, payload_json) == False:
+    elif payload_headers['X-GitHub-Event'] == 'pull_request':
+        if handle_pull_request(payload_headers, payload_json['pull_request']) == False:
             return '', 501
         return '', 200
     else:

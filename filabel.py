@@ -181,7 +181,6 @@ def get_secret():
         for o in opts:
             if o == 'secret':
                 ret = config.get('github', o)
-    print(f"secret: {ret}", file=sys.stderr)
     return ret
 
 

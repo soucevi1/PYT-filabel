@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Filabel</title>
+    </head>
+    <body>
+        {% if name %}
+            <span>User: {{ name }}</span>
+        {% else %}
+            <span>User: no name specified</span>
+        {% endif %}
+
+        <ul>
+            {% for key in rules %}
+            {{ key }}:
+            <ul>
+                {% for item in rules[key] %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endfor %}
+        </ul>
+    </body>
+</html>

@@ -18,6 +18,7 @@ app = Flask(__name__)
 # Default values for configuration files
 cred_conf_default = 'credentials.cfg'
 label_conf_default = 'labels.cfg'
+repo_name = 'soucevi1/PYT-01'
 
 
 # POST na /:
@@ -95,13 +96,15 @@ def react_to_post():
     payload_json = request.get_json()
     if payload_headers['X-GitHub-Event'] == 'ping':
         if handle_ping(payload_headers) == False:
-            return '404'
-        return '204' 
+            app.logger.info('ping fail')
+            return '', 404
+        return '', 200
     elif payload_json['X-GitHub-Event'] == 'pull_request':
-        handle_pull_request(payload_json)
+        if handle_pull_request(payload_headers, payload_json) == False:
+            return '', 501
+        return '', 200
     else:
-        with open('err_log.txt', 'w+') as f:
-            f.write(str(payload_json))
+        return '', 500
 
 
 def handle_ping(headers):
@@ -110,25 +113,60 @@ def handle_ping(headers):
     return True
 
 
-def handle_pull_request(js):
-    with open('PR_json.txt', 'w+') as f:
-        f.write(str(js))
+def handle_pull_request(headers, pj):
+    #if check_signature(headers) == False:
+    #    return False
+    filenames = get_conf_files()
+    session = requests.Session()
+    with open(filenames['cred']) as f:
+        s = create_session(f)
+        if s == False:
+            print('Unable to open session', file=sys.stderr)
+            return False
+        session = s
+    pull_num = pj['number']
+    labels_current = get_current_labels(pj['labels'])
+    pull_filenames = get_pr_files(repo_name, session, pull_num)
+    if pull_filenames == False:
+        print('Unable to get the list of filenames', file=sys.stderr)
+        return False
+    fpatterns = get_label_patterns(config_labels)
+    if fpatterns == False:
+        print('Unable to get list of patterns', file=sys.stderr)
+        return False
+    labels_new = get_all_labels(pull_filenames, fpatterns) 
+    u_labels_to_keep = get_unknown_labels_to_keep(labels_current, fpatterns)
+    labels_to_add = labels_new
+    labels_to_add += u_labels_to_keep
+    labels_to_add = list(set(labels_to_add))
+    fl = add_labels(repo_name, pull_num, labels_to_add, session)     
+    if fl == False:
+        print('Unable to add labels', file=sys.stderr)
+        return False
+    return True
 
     
 def check_signature(headers):
-    secret = get_secret()
+    #secret = get_secret()
+    secret = "********"
     if 'X-Hub-Signature' not in headers:
+        print('no signature')
         return False
     sig = headers['X-Hub-Signature']
     sha_name, signature = sig.split('=')
     if sha_name != 'sha1':
+        print('wrong hashfunction')
         return False
-    hobj = hmac.new(str(secret), msg=request.data, digestmod=hashlib.sha1)
-    if hmac.compare_digest(str(hobj.hexdigest()), str(signature)) == False:
+    s = bytearray(secret, 'utf8')
+    m = request.data
+    h = hmac.new(s, msg=m, digestmod=hashlib.sha1)
+    my_signature = h.hexdigest()
+    if hmac.compare_digest(my_signature, signature) == False:
+        print(f'secret: {s}\nmsg: {m}\nsig: {signature}\nmy: {my_signature}')
         return False     
     return True
 
-
+# porovnani klicu nefunguje
 def get_secret():
     conf_files = get_conf_files()
     config = configparser.ConfigParser()
@@ -240,7 +278,7 @@ def get_repo_prs(r, state, base, session):
 
 def get_pr_files(r, session, pull_num):
     """
-    Get json containing all the files that are modified in the current pull request
+    Get list containing all the files that are modified in the current pull request
         r: string 'author/repo-name'
         session: open and authenticated session
         pull_num: number of the pull request

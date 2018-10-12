@@ -149,8 +149,8 @@ def handle_pull_request(headers, pj):
 
     
 def check_signature(headers):
-    #secret = get_secret()
-    secret = "********"
+    secret = get_secret()
+    #secret = "********"
     if 'X-Hub-Signature' not in headers:
         print('no signature')
         return False

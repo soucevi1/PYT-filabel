@@ -130,10 +130,12 @@ def handle_pull_request(headers, pj):
     if pull_filenames == False:
         print('Unable to get the list of filenames', file=sys.stderr)
         return False
-    fpatterns = get_label_patterns(config_labels)
-    if fpatterns == False:
-        print('Unable to get list of patterns', file=sys.stderr)
-        return False
+    fpatterns = {}
+    with open(filenames['label']) as f:
+        fpatterns = get_label_patterns(f)
+        if fpatterns == False:
+            print('Unable to get list of patterns', file=sys.stderr)
+            return False
     labels_new = get_all_labels(pull_filenames, fpatterns) 
     u_labels_to_keep = get_unknown_labels_to_keep(labels_current, fpatterns)
     labels_to_add = labels_new

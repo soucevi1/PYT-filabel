@@ -8,3 +8,4 @@ test*
 test_environment
 res.txt
 __pycache__
+.env

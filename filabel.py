@@ -67,9 +67,27 @@ def show_main_page():
     with open(filenames['label']) as f:
         r = get_label_patterns(f)
         if r == False:
-            r = {'X': 'No label configuration supplied!'}    
-    username = 'soucevi1'
+            r = {'X': 'No label configuration supplied!'}
+    username = get_username(filenames['cred'])
+    if username == False:
+        username = 'Unable to get'
     return render_template('main.html', name=username, rules = r)
+
+
+def get_username(conf):
+    """
+    Get username of the token's owner.
+    """
+    sesison = ''
+    with open(conf) as f:
+        session = create_session(f)
+    if session == False:
+        return False
+    u = session.get('https://api.github.com/user')
+    u_json = u.json()
+    if 'login' not in u_json:
+        return False
+    return u_json['login']
 
 
 @app.route('/', methods=['POST'])

@@ -28,32 +28,23 @@ def get_conf_files():
     ret_files = {'cred': '', 'label': ''}
     cvar = os.getenv('FILABEL_CONFIG')
     if cvar == None:
-        ret_files['cred'] = cred_conf_default
-        ret_files['label'] = label_conf_default
-        return ret_files
+        False
     # Test if there are more conf files
     cvar = cvar.split(':')
-    if len(cvar) >= 2:
-        for fn in cvar:
-            if 'label' in fn:
-                ret_files['label'] = fn
-            elif ('cred' in fn) or ('auth' in fn):                
+    if len(cvar) != 2:
+        return False
+    
+    for fn in cvar:
+        with open(fn) as f:
+            config = configparser.ConfigParser()
+            config.read_file(f)
+            if config.has_section('github'):
                 ret_files['cred'] = fn
-        if ret_files['label'] == '':
-            ret_files['label'] = label_conf_default
-        if ret_files['cred'] == '':
-            ret_files['cred'] == cred_conf_default
-        return ret_files
-    # Only 1 CF supplied
-    if 'label' in cvar:
-        ret_files['label'] = cvar
-        ret_files['cred'] = cred_conf_default
-    elif ('cred' in cvar) or ('auth' in cvar):
-        ret_files['cred'] = cvar
-        ret_files['label'] = label_conf_default
-    else:
-        ret_files['label'] = label_conf_default
-        ret_files['cred'] = cred_conf_default
+            elif config.has_section('labels'):
+                ret_files['label'] = fn   
+
+    if (ret_files['cred'] == '') or (ret_files['label'] == ''):
+        return False
     return ret_files
 
 
@@ -63,6 +54,8 @@ def show_main_page():
     Show main page '/' to GET method. 
     """
     filenames = get_conf_files()
+    if filenames == False:
+        return '', 500
     r = ''
     with open(filenames['label']) as f:
         r = get_label_patterns(f)
@@ -129,6 +122,9 @@ def handle_pull_request(headers, pj):
     if check_signature(headers) == False:
         return False
     filenames = get_conf_files()
+    if filenames == False:
+        print('Unable to get config files', file=sys.stderr)
+        return False
     session = requests.Session()
     with open(filenames['cred']) as f:
         s = create_session(f)
@@ -165,6 +161,8 @@ def check_signature(headers):
     Verify the X-Hub-Signature
     """
     secret = get_secret()
+    if secret == False:
+        return False
     if 'X-Hub-Signature' not in headers:
         print('no signature')
         return False
@@ -187,8 +185,10 @@ def get_secret():
     Read the webhook secret from configuration file
     """
     conf_files = get_conf_files()
+    if conf_files == False:
+        return ''
     config = configparser.ConfigParser()
-    ret = ''
+    ret = False
     with open(conf_files['cred']) as f:
         config.read_file(f)
         if config.has_section('github') == False:

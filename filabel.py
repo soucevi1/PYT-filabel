@@ -15,11 +15,6 @@ import hashlib
 
 app = Flask(__name__)
 
-# Default values for configuration files
-cred_conf_default = 'credentials.cfg'
-label_conf_default = 'labels.cfg'
-repo_name = 'soucevi1/PYT-01'
-
 
 def get_conf_files():
     """
@@ -71,7 +66,7 @@ def get_username(conf):
     """
     Get username of the token's owner.
     """
-    sesison = ''
+    sesison = requests.Session()
     with open(conf) as f:
         session = create_session(f)
     if session == False:
@@ -132,6 +127,9 @@ def handle_pull_request(headers, pj):
             print('Unable to open session', file=sys.stderr)
             return False
         session = s
+    repo_name = get_repo_name(pj)
+    if repo_name == False:
+        return False
     pull_num = pj['number']
     labels_current = get_current_labels(pj['labels'])
     pull_filenames = get_pr_files(repo_name, session, pull_num)
@@ -156,6 +154,23 @@ def handle_pull_request(headers, pj):
     return True
 
     
+def get_repo_name(p_json):
+    """
+    Get name of the current repository
+    """
+    if 'head' not in p_json:
+        print('No "head" in pull request payload')
+        return False
+    if 'repo' not in p_json['head']:
+        print('No "repo" in pull request payload')
+        return False
+    if 'full_name' not in p_json['head']['repo']:
+        print('No "full_name" in pull request payload')
+        return False
+    return p_json['head']['repo']['full_name']
+
+
+
 def check_signature(headers):
     """
     Verify the X-Hub-Signature

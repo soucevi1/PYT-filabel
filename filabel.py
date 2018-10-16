@@ -158,16 +158,16 @@ def get_repo_name(p_json):
     """
     Get name of the current repository
     """
-    if 'head' not in p_json:
-        print('No "head" in pull request payload')
+    if 'base' not in p_json:
+        print('No "base" in pull request payload', file=sys.stderr)
         return False
-    if 'repo' not in p_json['head']:
-        print('No "repo" in pull request payload')
+    if 'repo' not in p_json['base']:
+        print('No "repo" in pull request payload', file=sys.stderr)
         return False
-    if 'full_name' not in p_json['head']['repo']:
-        print('No "full_name" in pull request payload')
+    if 'full_name' not in p_json['base']['repo']:
+        print('No "full_name" in pull request payload', file=sys.stderr)
         return False
-    return p_json['head']['repo']['full_name']
+    return p_json['base']['repo']['full_name']
 
 
 

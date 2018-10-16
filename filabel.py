@@ -134,7 +134,7 @@ def handle_pull_request(headers, pj):
     labels_current = get_current_labels(pj['labels'])
     pull_filenames = get_pr_files(repo_name, session, pull_num)
     if pull_filenames == False:
-        print('Unable to get the list of filenames', file=sys.stderr)
+        print(f'Unable to get the list of filenames of repo: {repo_name}, pull number: {pull_num}', file=sys.stderr)
         return False
     fpatterns = {}
     with open(filenames['label']) as f:
@@ -318,6 +318,7 @@ def get_pr_files(r, session, pull_num):
     """
     pull_files = session.get(f'https://api.github.com/repos/{r}/pulls/{pull_num}/files')
     if pull_files.status_code != 200:
+        print(f'Response code: {pull_files.status_code} from https://api.github.com/repos/{r}/pulls/{pull_num}/files', stdout=sys.stderr)
         return False
     flist = get_pr_filenames(pull_files.json())
 
@@ -332,6 +333,7 @@ def get_pr_files(r, session, pull_num):
             if l['rel'] == 'next':
                 pull_files = session.get(l['url'])
                 if pull_files.status_code != 200:
+                    print(f'Response code: {pull_files.status_code} from https://api.github.com/repos/{r}/pulls/{pull_num}/files', stdout=sys.stderr)
                     return False
                 n_flag = True
                 break

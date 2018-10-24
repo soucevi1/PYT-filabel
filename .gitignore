@@ -9,3 +9,7 @@ test_environment
 res.txt
 __pycache__
 .env
+filabel-test*
+*egg*
+build
+dist

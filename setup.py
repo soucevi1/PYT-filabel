@@ -8,7 +8,7 @@ with open('README') as f:
 
 setup(
     name='filabel_soucevi1',
-    version='0.3.3',
+    version='0.3.4',
     description='Automatic labels for GitHub pull requests',
     long_description=long_description,
     author='Vít Souček',
@@ -32,9 +32,11 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Framework :: Flask'
+        'Framework :: Flask',
+        'Environment :: Console',
+        'Environment :: Web Environment',
         ],
     zip_safe=False,
     install_requires=[ 'wheel', 'Flask', 'click', 'colorama', 'requests'],
-
+    keywords='label,github,file,web,cli'
 )

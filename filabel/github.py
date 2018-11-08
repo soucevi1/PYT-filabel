@@ -29,13 +29,13 @@ def get_auth(f):
     return ret
 
 
-def create_session(config_auth):
+def create_session(config_auth, s=None, t=None):
     """Create session using the access token"""
     global token
-    token = get_auth(config_auth)
+    token = t or get_auth(config_auth)
     if token == False:
         return False
-    session = requests.Session()
+    session = s or requests.Session()
     session.headers = {'User-Agent': 'soucevi1'}
     session.auth = token_auth
     return session
@@ -70,9 +70,9 @@ def get_pr_files(r, session, pull_num):
                     return False
                 n_flag = True
                 break
-        flist += get_pr_filenames(pull_files.json())
         if n_flag == False:
-            break        
+            break
+        flist += get_pr_filenames(pull_files.json())        
     return flist
 
 

@@ -4,7 +4,6 @@ out*
 __venv__
 setup.sh
 delete.sh
-test*
 test_environment
 res.txt
 __pycache__
@@ -13,3 +12,4 @@ filabel-test*
 *egg*
 build
 dist
+filabel_soucevi1-*

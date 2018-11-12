@@ -4,6 +4,7 @@ import requests
 import pytest
 import os
 import json
+import configparser
 
 
 label_file = 'tests/fixtures/labels2.cfg'
@@ -20,12 +21,27 @@ labels = {"frontend": ["*/templates/*", "static/*"],
           "file10": ["file10*"], "file9": ["file9*"]}
 
 
+def get_token(f):
+    """Get authentication token from config file"""
+    config = configparser.ConfigParser()
+    config.read_file(f)
+    if config.has_section('github') == False:
+        return False
+    opts = config.options('github')
+    ret = ''
+    for o in opts:
+        if o == 'token':
+            ret = config.get('github', o)
+    if ret == '':
+        return False
+    return ret
+
 
 with betamax.Betamax.configure() as config:
     config.cassette_library_dir = 'tests/fixtures/cassettes'
     if 'AUTH_FILE' in os.environ:
         with open(os.environ['AUTH_FILE']) as af:
-            TOKEN = filabel.github.get_auth(af)
+            TOKEN = get_token(af)
         config.default_cassette_options['record_mode'] = 'all'
     else:
         TOKEN = 'false_token'

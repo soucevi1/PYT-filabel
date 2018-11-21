@@ -12,4 +12,5 @@ __pycache__
 filabel-test*
 *egg*
 build
+distdocs/_build
 dist

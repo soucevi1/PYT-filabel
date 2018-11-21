@@ -1,20 +1,35 @@
+"""
+Module containing the GitHub logic used in filabel.
+"""
+
 import requests
 import json
 import fnmatch
 import configparser
 import sys
 
+"""
+GitHub authorization token
+"""
 token = 'abc'
 
 
 def token_auth(req):
-    """Helper function for the session"""
+    """
+    Helper function for the GitHub session
+    """
     req.headers['Authorization'] = f'token {token}'
     return req
 
 
 def get_auth(f):
-    """Get authentication token from config file"""
+    """
+    Get authentication token from config file
+        :param f: configuration file with credentials
+        :type f: file
+        :returns: parsed GitHub token, False if something went wrong
+        :rtype: string, bool
+    """
     config = configparser.ConfigParser()
     config.read_file(f)
     if config.has_section('github') == False:
@@ -30,7 +45,15 @@ def get_auth(f):
 
 
 def create_session(config_auth, s=None, t=None):
-    """Create session using the access token"""
+    """
+    Create session using the access token
+        :param config_auth: configuration file containing credentials
+        :param s: debug param
+        :param t: debug param
+        :type config_auth: file
+        :returns: open GitHub session, False if something went wrong
+        :rtype: requests.Session(), bool
+    """
     global token
     token = t or get_auth(config_auth)
     if token == False:
@@ -41,13 +64,17 @@ def create_session(config_auth, s=None, t=None):
     return session
 
 
-
 def get_pr_files(r, session, pull_num):
     """
     Get list containing all the files that are modified in the current pull request
-        r: string 'author/repo-name'
-        session: open and authenticated session
-        pull_num: number of the pull request
+        :param r: string 'author/repo-name'
+        :param session: open and authenticated session
+        :param pull_num: number of the pull request
+        :type r: string
+        :type session: requests.Session()
+        :type pull_num: int
+        :returns: list of files contained in the pull requests
+        :rtype: list
     """
     pull_files = session.get(f'https://api.github.com/repos/{r}/pulls/{pull_num}/files')
     if pull_files.status_code != 200:
@@ -80,7 +107,10 @@ def get_pr_files(r, session, pull_num):
 def get_pr_filenames(fj):
     """
     Parse filenames from file json
-        fj: files json
+        :param fj: pull requests files JSON
+        :type fj: JSON
+        :returns: list of filenames from one pull request
+        :rtype: list
     """
     fns = []
     for i in range(len(fj)):
@@ -92,8 +122,12 @@ def get_pr_filenames(fj):
 def get_all_labels(filenames, pattern_dict):
     """
     Get labels to add to the PR
-        filenames: list of fns
-        paterns: dict "label:[pattern, p...]"
+        :param filenames: list of filenams
+        :param patern_dict: rules for labeling
+        :type filnames: list
+        :type pattern_dict: dictionary
+        :returns: list of labels belonging to the pull request
+        :rtype: list
     """
     ret = []
     for fn in filenames:
@@ -107,7 +141,11 @@ def get_all_labels(filenames, pattern_dict):
 
 def get_label_patterns(file):
     """
-    Parse fn patterns from config file
+    Parse filename patterns from config file
+        :param file: configuration file containing labeling rules
+        :type file: file
+        :returns: parsed labeling rules, False if something went wrong
+        :rtype: dictionary, bool
     """
     config = configparser.ConfigParser()
     config.read_file(file)
@@ -127,6 +165,12 @@ def get_label_patterns(file):
 def get_unknown_labels_to_keep(labels_curr, pattern_dict):
     """
     Filter out the labels that match the configuration file
+        :param labels_curr: known labels
+        :param pattern_dict: dirtionary containing all the mach rules
+        :type labels_curr: list
+        :type pattern_dict: dictionary
+        :returns: list of labels
+        :rtype: list
     """
     ret = []
     pat = []
@@ -144,6 +188,16 @@ def get_unknown_labels_to_keep(labels_curr, pattern_dict):
 def add_labels(repo, pull_num, labels, session):
     """
     Add all the labels to the PR
+        :param repo: repository
+        :param pull_num: number of pull request
+        :param labels: labels to add
+        :param session: open Github session
+        :type repo: string
+        :type pull_num: int
+        :type labels: list
+        :type session: requests.Session
+        :returns: True if labels added successfully, False otherwise
+        :rtype: bool
     """
     params = json.dumps(labels)
     ret = session.put(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels', 
@@ -155,10 +209,13 @@ def add_labels(repo, pull_num, labels, session):
     return True
 
 
-
 def get_current_labels(lj):
     """
     Get labels from json file
+        :param lj: labels JSON
+        :type lj: JSON
+        :returns: list of label names
+        :rtype: list
     """
     ret = []
     for i in lj:
@@ -169,6 +226,16 @@ def get_current_labels(lj):
 def test_labels_added(repo, pull_num, labels, session):
     """
     Test whether the labels were added correctly (permissions etc.)
+        :param repo: repository
+        :param pull_num: number of pull request
+        :param labels: labels that were added
+        :param session: open github session
+        :type repo: string
+        :type pull_num: int
+        :type labels: list
+        :type session: requests.Session
+        :returns: True if labels are correct, False oherwise
+        :rtype: bool
     """
     ret = session.get(f'https://api.github.com/repos/{repo}/issues/{pull_num}/labels')
     if ret.status_code != 200:
@@ -198,6 +265,10 @@ def test_labels_added(repo, pull_num, labels, session):
 def get_label_names(l_json):
     """
     Get names of all the labels in given json
+        :param l_json: list of labels jsons
+        :type l_json: list
+        :returns: list of labels names
+        :rtype: list
     """
     llist = []
     for j in l_json:

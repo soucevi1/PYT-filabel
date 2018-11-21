@@ -1,3 +1,7 @@
+"""
+CLI module of filabels program. Used to manually run the program and label the desired pull requests.
+"""
+
 import click
 import colorama
 import json
@@ -6,6 +10,10 @@ import pprint
 import os
 from filabel.github import *
 
+
+"""
+Helper class used to write the output
+"""
 class color:
    PURPLE = '\033[95m'
    CYAN = '\033[96m'
@@ -20,7 +28,13 @@ class color:
 
 
 def validate_repo_names(repos):
-    """Tell whether repo names are valid"""
+    """
+    Checks whether repository name is '{username}/{repo}'
+        :param repos: list of repository names
+        :type repos: list
+        :returns: True if all are OK, repo name of the one that is not
+        :rtype: bool, string
+    """
     for r in repos:
         s = r.split('/')
         if (s[0] == r):
@@ -36,10 +50,16 @@ def validate_repo_names(repos):
 def get_repo_prs(r, state, base, session):
     """
     Get all pull requests of a given repository
-        r: string 'author/repo-name'
-        state: state of the PR
-        base: base branch
-        session: open and authenticated session
+        :param r: repository name 'author/repo-name'
+        :param state: state of the PR
+        :param base: base branch
+        :param session: open and authenticated session
+        :type r: string
+        :type state: string
+        :type base: string
+        :type session: requests.Session()
+        :returns: list of JSON of the pull requests, False if something goes wrong
+        :rtype: list, bool
     """
     payload = {'state': state, 'base': base}
     pulls = session.get(f'https://api.github.com/repos/{r}/pulls', params=payload)
@@ -67,6 +87,12 @@ def get_repo_prs(r, state, base, session):
 def get_added_labels(l_new, l_old):
     """
     Get labels that are new to this PR
+        :param l_new: new labels to be added
+        :param l_old: labels that were already in the PR
+        :type l_new: list
+        :type l_old: list
+        :returns: list of labels that were added
+        :rtype: list
     """
     ret = []
     for l in l_new:
@@ -79,8 +105,15 @@ def get_added_labels(l_new, l_old):
 
 def get_new_in_current(l_new, l_old, pattern_dict):
     """
-    Get those labels, that are supposed to be added but 
-    were already there and known
+    Get those labels, that are supposed to be added but were already there and known
+        :param l_new: new labels
+        :param l_old: old labels
+        :param pattern_dict: directory of patterns that are used to match the filenames
+        :type l_new: list
+        :type l_old: list
+        :type pttern_dict: dictionary
+        :returns: list of knwon labels to be added, that were already in the pull request
+        :rtype: list
     """
     ret = []
     ret2 = []
@@ -96,6 +129,14 @@ def get_new_in_current(l_new, l_old, pattern_dict):
 def get_current_in_all(l_to_add, l_old, pattern_dict):
     """
     Get those labels that were already there and known
+        :param l_to_add: new labels
+        :param l_old: old labels
+        :type l_to_add: list
+        :type l_old: list
+        :param pattern_dict: directory of patterns that are used to match the filenames
+        :type pattern_dict: dictionary
+        :returns: list of the known assigned labels
+        :rtype: list
     """
     ret = []
     ret2 = []
@@ -113,6 +154,14 @@ def get_current_in_all(l_to_add, l_old, pattern_dict):
 def get_removed(l_new, l_old, fpatterns):
     """
     Get those labels that are supposed to be removed
+        :param l_new:  new labels
+        :param l_old: old labels
+        :param pattern_dict: directory of patterns that are used to match the filenames
+        :type l_new: list
+        :type l_old: list
+        :type pattern_dict: ditionary
+        :returns: list of removed labels
+        :rtype: list
     """
     ret = []
     ret2 = []
@@ -139,7 +188,21 @@ def get_removed(l_new, l_old, fpatterns):
     type=click.File('r'), help='File with labels configuration.')
 
 def main(config_auth, config_labels, reposlugs, state, delete_old, base):
-    """CLI tool for filename-pattern-based labeling of GitHub PRs"""
+    """
+    Main function of the CLI module. For every reposlug it finds all its PRs and sets its labels.
+        :param config_auth: name of the configuration file with credentials
+        :param config_labels: name of the configuration file with label rules
+        :param reposlugs: list of repo names ('owner/reponame')
+        :param state: state of the pull requests to be labeled (open, closed, all)
+        :param delete_old: flag indicating that old unused labels should be deleted from the PR
+        :param base: base branch
+        :type config_auth: string
+        :type config_labels: string
+        :type reposlugs: list of strings
+        :type state: string
+        :type delete_old: bool
+        :type base: string
+    """
     colorama.init(autoreset=True)
     # Validate inputs and parameters
     if config_auth == None:

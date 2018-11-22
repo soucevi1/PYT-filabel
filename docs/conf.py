@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'soucevi1-filabel'
+project = 'filabel-soucevi1'
 copyright = '2018, Vit Soucek'
 author = 'Vit Soucek'
 

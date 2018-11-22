@@ -1,5 +1,0 @@
-API
-===
-
-.. :automodule:: filabel
-   :members:

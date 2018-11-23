@@ -15,14 +15,18 @@ The program is currently only uploaded on `Testing PyPI <https://test.pypi.org/p
    $ python -m pip install --extra-index-url https://test.pypi.org/pypi filabel-soucevi1
 
 
-One day we might actually stop being lazy and make our `GitHub repository <https://github.com/soucevi1/PYT-01>`_ public. In that case, you can clone the repository on your computer, switch into its directory and install it by running:
+You can also get the program straight from our `GitHub repository <https://github.com/soucevi1/PYT-01>`_. In that case, you can clone the repository on your computer, switch into its directory and install it by running:
 
-.. code-block:: none
+... code-block:: none
+
+   $ python setup.py install
+
+You can also create `sdist` or `bdist`
+
+.. code-block:: none 
 
    $ python setup.py sdist
-   $ python -m pip install dist/filabel_soucevi1-version.tar.gz
-
-Where ``version`` in the filename is the version of the release.
+   $ python setup.py bdist_wheel
 
 
 Building the documentation

@@ -15,7 +15,8 @@ You can also get the program straight from our `GitHub repository <https://githu
    $ python setup.py install
 
 You can also create `sdist` or `bdist`
+
+.. code-block:: none
+
    $ python setup.py sdist
    $ python setup.py bdist_wheel
-
-Where ``version`` in the filename is the version of the release.

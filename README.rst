@@ -42,5 +42,10 @@ To run the `doctest`, simply run
 
    $ make doctest
 
+
+In order to pass the ``doctest`` tests you need to create files ``docs/fixtures/labels.cfg`` (containing the labeling rules) and ``docs/fixtures/credentials.cfg`` (containing the GitHub token)
+
 All the documentation is written in `reStructuredText <http://docutils.sourceforge.net/docs/ref/rst/restructuredtext.html>`_ format.
+
+
 

@@ -28,20 +28,25 @@ Where ``version`` in the filename is the version of the release.
 Building the documentation
 --------------------------
 
-In order to build the docs, you need to install `Sphinx <http://www.sphinx-doc.org/en/master/>`_ (together with doctest and autodoc if you want to change the program functionality).
+In order to build the docs, you need to install `Sphinx <http://www.sphinx-doc.org/en/master/>`_ (together with ``doctest`` and ``autodoc`` if you want to change the program functionality).
 
-To generate the documentation, just switch to the `docs` directory and run 
-
-.. code-block:: none
-
-   $ make html
-
-To run the `doctest`, simply run
+To run the `doctest`, simply switch to ``docs`` directory and run
 
 .. code-block:: none
 
    $ make doctest
 
+To get the API documentation, switch to the project root directory and run
+
+.. code-block::
+
+   $ python -m sphinx.apidoc -o docs filabel
+
+To generate the documentation, just switch back to the ``docs`` directory and run 
+
+.. code-block:: none
+
+   $ make html
 
 In order to pass the ``doctest`` tests you need to create files ``docs/fixtures/labels.cfg`` (containing the labeling rules) and ``docs/fixtures/credentials.cfg`` (containing the GitHub token)
 

@@ -1,3 +1,0 @@
-CLI and web application that automatically adds labels to GitHub pull requests.
-The labels are determined according to changed files in the pull request and
-given configuration file.

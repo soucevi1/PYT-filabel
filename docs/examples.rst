@@ -8,7 +8,7 @@ Regardless of that not being an intention, you can use parts of filabel's code i
 
    import filabel
    import os
-   label_file = '../tests/fixtures/labels.cfg'
+   label_file = 'fixtures/labels.cfg'
 
 You can for example use our label configuration file parsing function :func:`get_label_patterns()`:
 
@@ -39,7 +39,7 @@ If you want to get the configuration files from the environment, there is a func
 
 .. testcode::
 
-   os.environ['FILABEL_CONFIG'] = '../tests/fixtures/credentials.cfg:../tests/fixtures/labels.cfg'
+   os.environ['FILABEL_CONFIG'] = 'fixtures/credentials.cfg:fixtures/labels.cfg'
    r = filabel.web.get_conf_files()
    print(r)
 
@@ -47,4 +47,4 @@ Which should result in:
 
 .. testoutput::
 
-   {'cred': '../tests/fixtures/credentials.cfg', 'label': '../tests/fixtures/labels.cfg'}
+   {'cred': 'fixtures/credentials.cfg', 'label': 'fixtures/labels.cfg'}

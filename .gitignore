@@ -10,9 +10,9 @@ res.txt
 __pycache__
 .env
 filabel-test*
+*filabel-soucevi1*
 *egg*
 build
-dist
 dist
 */_build/*
 docs/_build/*

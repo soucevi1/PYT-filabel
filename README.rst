@@ -17,7 +17,7 @@ The program is currently only uploaded on `Testing PyPI <https://test.pypi.org/p
 
 You can also get the program straight from our `GitHub repository <https://github.com/soucevi1/PYT-01>`_. In that case, you can clone the repository on your computer, switch into its directory and install it by running:
 
-... code-block:: none
+.. code-block:: none
 
    $ python setup.py install
 

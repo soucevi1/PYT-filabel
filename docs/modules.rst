@@ -1,13 +1,13 @@
 .. _codedoc:
 
-Code documentation
+API documentation
 ==================
 
-Here you can take a look at how filabel works. Filabel is (so far) not really usable as an importable library, so the documentaion of the code is just for zyour information (and possible more comfortable debugging).
+Here you can take a look at how filabel works. Filabel is (so far) not really usable as an importable library, so the documentaion of the code is just for your information (and possible more comfortable debugging).
 
 Filabel consists of three main modules: cli, web and github.
 
-The cli module contains all functions providing the cli interface
+The cli module contains all functions providing the CLI interface
 
 The Github module provides all the functionality needed to connect o GitHub and get the information the program needs.
 

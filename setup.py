@@ -7,7 +7,7 @@ with open('README.rst') as f:
 
 setup(
     name='filabel_soucevi1',
-    version='0.3.4',
+    version='0.5.0',
     description='Automatic labels for GitHub pull requests',
     long_description=long_description,
     author='Vít Souček',
